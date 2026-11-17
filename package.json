@@ -1,0 +1,20 @@
+{
+  "name": "hereya-aws-forgejo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hereya package dilaya/aws-forgejo: a single-VM Forgejo git server (TLS, body cap, backups, alarms)",
+  "type": "module",
+  "scripts": {
+    "test": "node --test 'test/**/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "synth": "cdk synth"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "aws-cdk": "^2.1145.0",
+    "aws-cdk-lib": "^2.273.0",
+    "constructs": "^10.4.2",
+    "tsx": "^4.22.4",
+    "typescript": "^5.7.0"
+  }
+}

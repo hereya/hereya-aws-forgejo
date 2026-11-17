@@ -1,0 +1,77 @@
+name: dilaya/aws-forgejo
+version: 0.1.0
+description: "Dilaya's git server: one Forgejo VM (ARM, AL2023) behind Caddy (automatic TLS, request body cap), state on a separate encrypted EBS volume, daily forgejo dump to a versioned S3 bucket + daily EBS snapshots, four alarms, and an admin token for the connector in SSM Parameter Store."
+visibility: private
+iac: cdk
+infra: aws
+parameters:
+  hostname:
+    description: "Public DNS name of the server (e.g. git.<your-domain>). Used for the A record, the Let's Encrypt certificate (TLS-ALPN-01 on 443 — port 80 stays closed) and Forgejo's ROOT_URL. Changing it replaces the instance and issues a new certificate."
+    mandatory: true
+  hostedZoneId:
+    description: "Route 53 public hosted zone id in which the A record for `hostname` is created. The zone must be the authoritative, delegated zone of that name, otherwise the certificate cannot be issued."
+    mandatory: true
+  instanceType:
+    description: "EC2 instance type (ARM / Graviton only: the binaries are linux-arm64). Default t4g.small (2 vCPU, 2 GiB + 1 GiB swap): measured idle ~240 MiB, 10 parallel 8 MB commits ~0.7 GiB; with the 64 MB body cap a single request peaks ~0.3 GiB. Move to t4g.medium if the memory or CPU credit balance runs low. Changing it replaces the instance (~2-5 min of downtime)."
+    mandatory: false
+    default: "t4g.small"
+  amiId:
+    description: "AMI override. Empty (default) = the AL2023 arm64 image pinned in lib/pins.ts, so a deploy never replaces the VM by surprise. An explicit ami-… id moves the OS deliberately; 'latest' re-resolves at every deploy (surprise replacements included)."
+    mandatory: false
+    default: ""
+  dataVolumeGb:
+    description: "Size of the encrypted gp3 data volume (repos, SQLite DB, secrets, certificate), in GB. Can be increased later (online: modify the volume, then xfs_growfs /data over SSM); never decreased."
+    mandatory: false
+    default: "20"
+  rootVolumeGb:
+    description: "Size of the encrypted gp3 root volume, in GB. Holds only the OS, the two binaries and the swap file."
+    mandatory: false
+    default: "10"
+  maxBodyMb:
+    description: "Request body cap enforced by Caddy, in MB (1e6 bytes). Forgejo has NO limit of its own on the API and needs ~5x the body in memory (a 267 MB ChangeFiles body used 1.33 GiB in the sizing trial). Above the cap Caddy answers 413. The connector must apply the same cap before calling."
+    mandatory: false
+    default: "64"
+  backupRetentionDays:
+    description: "Days a dump is kept in the backup bucket (current AND noncurrent versions)."
+    mandatory: false
+    default: "30"
+  backupTimeUtc:
+    description: "Daily time (HH:MM UTC) of the forgejo dump to S3."
+    mandatory: false
+    default: "02:30"
+  snapshotTimeUtc:
+    description: "Daily time (HH:MM UTC) of the DLM EBS snapshot of the data volume (DLM starts it within the following hour)."
+    mandatory: false
+    default: "03:30"
+  snapshotRetentionCount:
+    description: "Number of daily EBS snapshots DLM keeps."
+    mandatory: false
+    default: "7"
+  webUiPublic:
+    description: "'false' (default): only /api/* and git smart-HTTP are reachable on the internet, everything else is 404; admins open the web UI through an SSM port forward (README). 'true': the whole web UI is public (sign-in still required, registration disabled)."
+    mandatory: false
+    default: "false"
+  adminUsername:
+    description: "Forgejo site-admin account created at first boot; the connector's token belongs to it."
+    mandatory: false
+    default: "dilaya-admin"
+  adminTokenParamName:
+    description: "SSM Parameter Store name (SecureString) where the box stores the admin token at first boot. Default /dilaya/forgejo/<stackName>/admin-token. Deleted with the stack."
+    mandatory: false
+    default: ""
+  healthProbeMinutes:
+    description: "Period of the in-region HTTPS health probe (GET /api/healthz), in minutes."
+    mandatory: false
+    default: "5"
+  autoDelete:
+    description: "'true' = the data volume, the backup bucket (emptied) and the log groups are DELETED with the stack. Throwaway stacks only. Default 'false' retains them."
+    mandatory: false
+    default: "false"
+  telegramBotTokenParam:
+    description: "Name of the SSM parameter holding the Telegram bot token that relays the alarms (same convention as dilaya/aws-sqlite-data; never the token itself). Empty = no relay, the alarm topic has no subscriber. Must be given with telegramChatId."
+    mandatory: false
+    default: ""
+  telegramChatId:
+    description: "Telegram chat id notified when an alarm fires (and recovers). Must be given with telegramBotTokenParam."
+    mandatory: false
+    default: ""

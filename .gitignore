@@ -1,0 +1,9 @@
+node_modules/
+.toolchain/
+.tmp/
+dist/
+cdk.out/
+*.tsbuildinfo
+.DS_Store
+# Holds the deploying account id (AZ lookup): never commit it — this repo is public.
+cdk.context.json

@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+      - "!main"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: No .ts file above 220 lines
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            lines=$(wc -l < "$f" | tr -d " ")
+            if [ "$lines" -gt 220 ]; then echo "::error file=$f,line=221::$f has $lines lines (limit 220)."; fail=1; fi
+          done < <(git ls-files '*.ts')
+          exit $fail
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
