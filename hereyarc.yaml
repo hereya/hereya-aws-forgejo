@@ -1,16 +1,22 @@
 name: dilaya/aws-forgejo
-version: 0.1.0
+version: 0.1.1
 description: "Dilaya's git server: one Forgejo VM (ARM, AL2023) behind Caddy (automatic TLS, request body cap), state on a separate encrypted EBS volume, daily forgejo dump to a versioned S3 bucket + daily EBS snapshots, four alarms, and an admin token for the connector in SSM Parameter Store."
 visibility: private
 iac: cdk
 infra: aws
 parameters:
+  enabled:
+    description: "'true' creates the git server. Anything else (default 'false') creates NOTHING — no instance, no volume, no bucket, no output — so a consumer deployed in several regions turns it on only where the server should live. hostname and hostedZoneId are then required."
+    mandatory: false
+    default: "false"
   hostname:
     description: "Public DNS name of the server (e.g. git.<your-domain>). Used for the A record, the Let's Encrypt certificate (TLS-ALPN-01 on 443 — port 80 stays closed) and Forgejo's ROOT_URL. Changing it replaces the instance and issues a new certificate."
-    mandatory: true
+    mandatory: false
+    default: ""
   hostedZoneId:
     description: "Route 53 public hosted zone id in which the A record for `hostname` is created. The zone must be the authoritative, delegated zone of that name, otherwise the certificate cannot be issued."
-    mandatory: true
+    mandatory: false
+    default: ""
   instanceType:
     description: "EC2 instance type (ARM / Graviton only: the binaries are linux-arm64). Default t4g.small (2 vCPU, 2 GiB + 1 GiB swap): measured idle ~240 MiB, 10 parallel 8 MB commits ~0.7 GiB; with the 64 MB body cap a single request peaks ~0.3 GiB. Move to t4g.medium if the memory or CPU credit balance runs low. Changing it replaces the instance (~2-5 min of downtime)."
     mandatory: false

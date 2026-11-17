@@ -1,6 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import type { Construct } from "constructs";
-import { readConfig } from "./config.ts";
+import { input, readConfig } from "./config.ts";
 import { createNetwork, createStorage } from "./storage.ts";
 import { createCompute } from "./compute.ts";
 import { createMonitoring } from "./monitoring.ts";
@@ -13,6 +13,14 @@ import { createMonitoring } from "./monitoring.ts";
 export class ForgejoStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+    // OFF unless the consumer says `enabled=true`. The connector deploys the same
+    // package list in every region; only the pod that should host the git server
+    // turns it on. Off = no server, no output (nothing reaches the consumer's
+    // env), one free placeholder so CloudFormation accepts the template.
+    if (input("enabled", "false") !== "true") {
+      new cdk.CfnWaitConditionHandle(this, "Disabled");
+      return;
+    }
     const cfg = readConfig(this.stackName);
     const net = createNetwork(this);
     const store = createStorage(this, cfg, net);

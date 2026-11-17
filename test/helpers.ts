@@ -3,6 +3,7 @@ import { Template } from "aws-cdk-lib/assertions";
 import { ForgejoStack } from "../lib/forgejo-stack.ts";
 
 export const BASE_INPUTS: Record<string, string> = {
+  enabled: "true",
   hostname: "git.example.test",
   hostedZoneId: "ZEXAMPLE12345",
 };
