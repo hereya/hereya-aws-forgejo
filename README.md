@@ -14,7 +14,7 @@ every 5 min      box metrics (DiskUsedPercent, BackupAgeHours) + in-region HTTPS
 alarms (4)  ───► SNS topic ──(optional)──► Telegram relay (same as dilaya/aws-sqlite-data)
 ```
 
-Parameters: see `hereyarc.yaml` (only `hostname` and `hostedZoneId` are mandatory).
+Parameters: see `hereyarc.yaml`. Nothing is created unless `enabled=true`; then `hostname` and `hostedZoneId` are required.
 
 Outputs (consumer env): `forgejoUrl`, `forgejoAdminTokenParam` (the SSM **name**, never the token),
 `forgejoBackupBucketName`, `forgejoInstanceId`, `iamPolicyForgejoToken` (ssm:GetParameter on that
@@ -134,7 +134,7 @@ observed and deleted by hand after the 17/11 trial.
 ```sh
 npm install
 npm run typecheck && npm test
-hostname=git.example.test hostedZoneId=ZEXAMPLE12345 npx cdk synth
+enabled=true hostname=git.example.test hostedZoneId=ZEXAMPLE12345 npx cdk synth
 ```
 
 `.ts` files stay ≤ 220 lines (CI guard).
