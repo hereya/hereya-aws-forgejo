@@ -44,14 +44,14 @@ function hhmm(name: string, fallback: string): string {
 }
 
 export function readConfig(stackName: string): ForgejoConfig {
-  const hostname = input("hostname", "").toLowerCase();
+  const hostname = input("forgejoHostname", "").toLowerCase();
   // The hostname is load-bearing (DNS record, certificate, ROOT_URL): no default.
   if (!/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(hostname)) {
-    throw new Error(`hostname must be a fully-qualified DNS name, got ${JSON.stringify(hostname)}`);
+    throw new Error(`forgejoHostname must be a fully-qualified DNS name, got ${JSON.stringify(hostname)}`);
   }
-  const hostedZoneId = input("hostedZoneId", "");
+  const hostedZoneId = input("forgejoHostedZoneId", "");
   if (!/^Z[A-Z0-9]{5,40}$/.test(hostedZoneId)) {
-    throw new Error(`hostedZoneId must be a Route 53 hosted zone id (Z...), got ${JSON.stringify(hostedZoneId)}`);
+    throw new Error(`forgejoHostedZoneId must be a Route 53 hosted zone id (Z...), got ${JSON.stringify(hostedZoneId)}`);
   }
   const telegramBotTokenParam = input("telegramBotTokenParam", "");
   const telegramChatId = input("telegramChatId", "");

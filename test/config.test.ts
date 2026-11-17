@@ -2,10 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { synth } from "./helpers.ts";
 
-test("hostname and hostedZoneId are mandatory and validated", () => {
-  assert.throws(() => synth({ hostname: "" }), /hostname/);
-  assert.throws(() => synth({ hostname: "not a host" }), /hostname/);
-  assert.throws(() => synth({ hostedZoneId: "nope" }), /hostedZoneId/);
+test("forgejoHostname and forgejoHostedZoneId are mandatory and validated", () => {
+  assert.throws(() => synth({ forgejoHostname: "" }), /forgejoHostname/);
+  assert.throws(() => synth({ forgejoHostname: "not a host" }), /forgejoHostname/);
+  assert.throws(() => synth({ forgejoHostedZoneId: "nope" }), /forgejoHostedZoneId/);
 });
 
 test("telegram inputs go together", () => {

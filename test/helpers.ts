@@ -3,9 +3,9 @@ import { Template } from "aws-cdk-lib/assertions";
 import { ForgejoStack } from "../lib/forgejo-stack.ts";
 
 export const BASE_INPUTS: Record<string, string> = {
-  enabled: "true",
-  hostname: "git.example.test",
-  hostedZoneId: "ZEXAMPLE12345",
+  forgejoEnabled: "true",
+  forgejoHostname: "git.example.test",
+  forgejoHostedZoneId: "ZEXAMPLE12345",
 };
 
 /** Synthesizes the stack with the given package inputs (env vars), then restores the env. */

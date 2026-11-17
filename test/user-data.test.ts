@@ -80,12 +80,12 @@ test("Caddyfile render is stable", () => {
 });
 
 function readConfigFor() {
-  process.env.hostname = "git.example.test";
-  process.env.hostedZoneId = "ZEXAMPLE12345";
+  process.env.forgejoHostname = "git.example.test";
+  process.env.forgejoHostedZoneId = "ZEXAMPLE12345";
   try {
     return readConfig("TestStack");
   } finally {
-    delete process.env.hostname;
-    delete process.env.hostedZoneId;
+    delete process.env.forgejoHostname;
+    delete process.env.forgejoHostedZoneId;
   }
 }

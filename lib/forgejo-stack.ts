@@ -13,11 +13,11 @@ import { createMonitoring } from "./monitoring.ts";
 export class ForgejoStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-    // OFF unless the consumer says `enabled=true`. The connector deploys the same
+    // OFF unless the consumer says `forgejoEnabled=true`. The connector deploys the same
     // package list in every region; only the pod that should host the git server
     // turns it on. Off = no server, no output (nothing reaches the consumer's
     // env), one free placeholder so CloudFormation accepts the template.
-    if (input("enabled", "false") !== "true") {
+    if (input("forgejoEnabled", "false") !== "true") {
       new cdk.CfnWaitConditionHandle(this, "Disabled");
       return;
     }
