@@ -17,8 +17,10 @@ alarms (4)  ───► SNS topic ──(optional)──► Telegram relay (sam
 Parameters: see `hereyarc.yaml`. Nothing is created unless `forgejoEnabled=true`; then `forgejoHostname` and `forgejoHostedZoneId` are required. The three are prefixed on purpose: Hereya hands a consumer's `-p` parameters to EVERY package of that consumer under their own name, so a generic name would reach the others.
 
 Outputs (consumer env): `forgejoUrl`, `forgejoAdminTokenParam` (the SSM **name**, never the token),
-`forgejoBackupBucketName`, `forgejoInstanceId`, `iamPolicyForgejoToken` (ssm:GetParameter on that
-one parameter — auto-attached to the consumer's role by Hereya).
+`iamPolicyForgejoToken` (ssm:GetParameter on that one parameter — auto-attached to the consumer's role by
+Hereya). Nothing else on purpose: every output lands in the consumer's Lambda env (4 KB cap). The instance
+and the backup bucket carry the stack's tags: `aws ec2 describe-instances --filters
+Name=tag:aws:cloudformation:stack-name,Values=<stack>` and `aws s3api list-buckets` (name starts with the stack).
 
 ## Design choices
 
@@ -42,7 +44,7 @@ one parameter — auto-attached to the consumer's role by Hereya).
 ## Operations (all over SSM Session Manager — there is no SSH)
 
 ```sh
-aws ssm start-session --target <forgejoInstanceId>
+aws ssm start-session --target <instance id — see Outputs above>
 sudo journalctl -u forgejo -u caddy --since -1h
 sudo cat /var/log/forgejo-box-bootstrap.log
 ```

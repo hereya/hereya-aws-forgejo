@@ -38,11 +38,11 @@ test("relay wording knows every alarm suffix", () => {
   for (const s of ["status-check", "disk", "backup-stale", "https"]) assert.notEqual(explain(`TestStack-${s}`), "", s);
 });
 
-test("outputs: URL, token PARAMETER NAME (never the token), bucket, instance id, read-only policy", () => {
+test("outputs: URL, token PARAMETER NAME (never the token), read-only policy — and nothing else", () => {
   const out = template.toJSON().Outputs;
   assert.deepEqual(out.forgejoUrl.Value, "https://git.example.test");
   assert.equal(out.forgejoAdminTokenParam.Value, "/dilaya/forgejo/TestStack/admin-token");
-  assert.ok(out.forgejoBackupBucketName && out.forgejoInstanceId);
+  assert.deepEqual(Object.keys(out).sort(), ["forgejoAdminTokenParam", "forgejoUrl", "iamPolicyForgejoToken"]);
   const policy = JSON.stringify(out.iamPolicyForgejoToken.Value);
   assert.match(policy, /ssm:GetParameter/);
   assert.doesNotMatch(policy, /PutParameter|\*"/);

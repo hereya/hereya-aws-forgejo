@@ -30,8 +30,8 @@ export class ForgejoStack extends cdk.Stack {
     // --- Package outputs (consumer env contract) -----------------------------
     new cdk.CfnOutput(this, "forgejoUrl", { value: `https://${cfg.hostname}` });
     new cdk.CfnOutput(this, "forgejoAdminTokenParam", { value: cfg.adminTokenParamName });
-    new cdk.CfnOutput(this, "forgejoBackupBucketName", { value: store.bucket.bucketName });
-    new cdk.CfnOutput(this, "forgejoInstanceId", { value: compute.instance.instanceId });
+    // ONLY what the consumer needs: every output lands in the consumer's Lambda env, and the
+    // connector's sits near the 4 KB cap. The bucket and the instance are found by the stack's tags.
     // Auto-attached to the consumer's role by Hereya (iamPolicy* convention):
     // read the token, nothing else.
     new cdk.CfnOutput(this, "iamPolicyForgejoToken", {
