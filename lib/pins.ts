@@ -9,7 +9,9 @@
 /** Forgejo 17.0.1 (2026-10-26): latest stable on 2026-11-17, carries the 26/10 security fixes. */
 export const FORGEJO = {
   version: "17.0.1",
-  url: "https://codeberg.org/forgejo/forgejo/releases/download/v17.0.1/forgejo-17.0.1-linux-arm64.xz",
+  // code.forgejo.org: the Forgejo project's own instance (same release, same bytes). codeberg.org stopped
+  // resolving on 2026-11-18 and a boot that cannot fetch the binary never serves.
+  url: "https://code.forgejo.org/forgejo/forgejo/releases/download/v17.0.1/forgejo-17.0.1-linux-arm64.xz",
   // sha256 of the DECOMPRESSED binary (forgejo-17.0.1-linux-arm64.sha256).
   sha256: "1e99403746406e8199efc903ddd1940d5728a60e50241f7aa6c9f2b907bd8ec9",
 } as const;
