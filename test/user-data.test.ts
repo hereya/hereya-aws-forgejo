@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { synth, userDataText } from "./helpers.ts";
-import { renderAppIni, renderCaddyfile } from "../lib/render.ts";
+import { ADMIN_TOKEN_SCOPES, renderAppIni, renderCaddyfile } from "../lib/render.ts";
 import { readConfig } from "../lib/config.ts";
 import { CADDY, FORGEJO } from "../lib/pins.ts";
 
@@ -42,6 +42,28 @@ test("Forgejo hardening settings", () => {
   ]) assert.ok(ud.includes(line), line);
   assert.match(ud, /\[mailer\]\nENABLED = false/);
   assert.match(ud, /\[api\]\nENABLE_SWAGGER = false/);
+});
+
+test("0.1.3 hardening: no forks, no migrations, no webhooks, no users page, no org by a non-admin", () => {
+  assert.match(ud, /\[repository\]\n[^[]*DISABLE_FORKS = true\n/);
+  assert.match(ud, /\[repository\]\n[^[]*DISABLE_MIGRATIONS = true\n/);
+  assert.match(ud, /\[security\]\n[^[]*DISABLE_WEBHOOKS = true\n/);
+  assert.match(ud, /\[service\.explore\]\nREQUIRE_SIGNIN_VIEW = true\nDISABLE_USERS_PAGE = true\n/);
+  assert.match(ud, /\[admin\]\nDISABLE_REGULAR_ORG_CREATION = true\n/);
+});
+
+test("admin token: the three scopes the connector needs, never `all`; re-minted when the scopes change", () => {
+  assert.equal(ADMIN_TOKEN_SCOPES, "write:admin,write:organization,write:repository");
+  assert.ok(ud.includes(`FG_TOKEN_SCOPES=${ADMIN_TOKEN_SCOPES}\n`));
+  const sh = readFileSync(new URL("../lib/boot/token.sh", import.meta.url), "utf8");
+  assert.match(sh, /--scopes "\$FG_TOKEN_SCOPES"/);
+  assert.doesNotMatch(sh, /--scopes all/);
+  // kept only when the marker says the stored token has THESE scopes
+  assert.match(sh, /"\$\(cat "\$marker" 2>\/dev\/null\)" = "\$FG_TOKEN_SCOPES"/);
+  // the old connector-* tokens go, with the token in a header FILE, never an argument
+  assert.match(sh, /curl -fsS -H @"\$hdr"/);
+  assert.match(sh, /-X DELETE/);
+  assert.doesNotMatch(sh, /Authorization: token \$tok"/);
 });
 
 test("no secret inline in app.ini: all four are *_URI files on the data volume", () => {

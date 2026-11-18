@@ -39,7 +39,33 @@ Name=tag:aws:cloudformation:stack-name,Values=<stack>` and `aws s3api list-bucke
 - **Health check = a tiny Lambda**, not Route 53 (its metrics live only in us-east-1, out of reach
   of this region's SNS topic) nor Synthetics (~10 $/month at 5 min).
 - **Admin token**: minted at first boot by `forgejo-box-token`, written to SSM SecureString through
-  a 0600 temp file (never in argv, logs, or outputs). Deleted from SSM with the stack.
+  a 0600 temp file (never in argv, logs, or outputs). Deleted from SSM with the stack. Scoped
+  `write:admin,write:organization,write:repository` (never `all`, see "Admin token scopes").
+- **Hardened app.ini** (0.1.3, on top of: registration off, sign-in required to view, everything
+  private, SSH/mail/OpenID/OAuth2/Actions/packages/federation/swagger off): `DISABLE_FORKS` (a
+  per-repo account must not copy its repo out of its fence), `DISABLE_MIGRATIONS` and
+  `DISABLE_WEBHOOKS` (both make the server fetch a URL a user chose — SSRF), the users page off,
+  `DISABLE_REGULAR_ORG_CREATION` (only the admin creates orgs).
+
+## Admin token scopes
+
+Every call the connector's Forgejo forge makes, and the scope Forgejo checks for it (each
+of the three was shown necessary on 17.0.1: dropping it turns its calls into 403):
+
+| Connector call | Endpoint | Scope |
+|---|---|---|
+| repo accounts: create, delete; their tokens: list, mint, delete; list users (token sweep) | `POST/DELETE /admin/users[/{u}]`, `GET/POST/DELETE /admin/users/{u}/tokens[/{id}]`, `GET /admin/users` | `write:admin` |
+| create the org; create a repo in it; list its repos (templates) | `POST /orgs`, `POST /orgs/{org}/repos`, `GET /orgs/{org}/repos` | `write:organization` |
+| a repo by id; rename + archive; collaborator; file read; archive zip; generate from template | `GET /repositories/{id}`, `PATCH /repos/{o}/{r}`, `PUT /repos/{o}/{r}/collaborators/{u}`, `GET …/contents/…`, `GET …/archive/…`, `POST /repos/{o}/{t}/generate` | `write:repository` |
+
+The tokens the connector hands an agent are a different thing: minted for a per-repo account,
+`write:repository` or `read:repository` only, limited to that one repo.
+
+**A running server gets the new scopes by itself**: `forgejo-box-token` keeps the stored
+token only if a marker on the data volume (`/data/forgejo-box/token-scopes`) names the current
+scopes. A box upgraded from 0.1.2 has no marker, so the boot of its replacement instance mints a
+scoped token, overwrites the parameter and deletes the old `all` token. Without a deploy, the same
+on the box: `sudo /usr/local/sbin/forgejo-box-token --rotate`.
 
 ## Operations (all over SSM Session Manager — there is no SSH)
 
@@ -61,10 +87,11 @@ aws ssm start-session --target <id> --document-name AWS-StartPortForwardingSessi
 # then http://localhost:3000
 ```
 
-**Token rotation**: on the box `sudo /usr/local/sbin/forgejo-box-token --rotate` (new token,
-parameter overwritten), then delete the old `connector-*` token:
-`DELETE /api/v1/users/dilaya-admin/tokens/<name>` with the new token. The connector must re-read
-the parameter (cold start or cache expiry).
+**Token rotation**: on the box `sudo /usr/local/sbin/forgejo-box-token --rotate`, or from the laptop
+`aws ssm send-command --instance-ids <id> --document-name AWS-RunShellScript --parameters 'commands=["/usr/local/sbin/forgejo-box-token --rotate"]'`.
+It mints a new token, overwrites the parameter, then deletes every OTHER `connector-*` token of
+the admin (through the local API, the token in a 0600 header file). Idempotent. The connector
+re-reads the parameter on its next 401 (and every 15 min).
 
 **Manual backup**: `sudo systemctl start forgejo-backup.service`.
 
@@ -107,9 +134,17 @@ the restored server healthy.
    ```
 4. `sudo systemctl start forgejo`, then
    `sudo -u git forgejo --config /etc/forgejo/app.ini --work-path /data/forgejo admin regenerate hooks`.
-5. **Always** re-mint the connector token afterwards: `sudo /usr/local/sbin/forgejo-box-token --rotate`.
-   (In the trial the restored instance answered 401 to the pre-restore token; the cause was not
-   established — treat the old token as invalid after any restore.)
+5. Re-mint the connector token afterwards: `sudo /usr/local/sbin/forgejo-box-token --rotate`.
+   (In the 17/11 trial the restored instance answered 401 to the pre-restore token; in the 18/11
+   restore test, tokens minted before the backup — admin and repo-limited — still worked after the
+   restore, fence included. Re-minting stays the rule: it costs nothing.)
+
+**Restore test** (local, read-only on AWS): `scripts/restore-test.sh --bucket <backup bucket>`
+fetches the newest dump, restores it into a throwaway local Forgejo of the pinned version in a
+container (this package's app.ini), checks DB integrity, users, every repo (on disk, `git fsck`,
+served by the API, one cloned over smart-HTTP at the same HEAD) and the token rows, prints names
+and counts only, then deletes the container and the local copy. `--from-dir` takes a backup on
+disk instead; `--forgejo-binary` a local binary when the release host is unreachable.
 
 From an EBS snapshot instead: create a volume from the snapshot in the instance's AZ, stop the
 stack's instance, swap it in (detach old / attach new as `/dev/sdf`), start. Or restore the snapshot

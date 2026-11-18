@@ -7,10 +7,16 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ForgejoConfig } from "./config.ts";
 import { CADDY, FORGEJO } from "./pins.ts";
-import { FORGEJO_PORT, FORGEJO_WORK, renderAppIni, renderCaddyfile } from "./render.ts";
+import { ADMIN_TOKEN_SCOPES, FORGEJO_PORT, FORGEJO_WORK, renderAppIni, renderCaddyfile } from "./render.ts";
 
 const bootDir = join(dirname(fileURLToPath(import.meta.url)), "boot");
-const script = (name: string): string => readFileSync(join(bootDir, name), "utf8");
+// A box script as shipped: its full-line comments dropped (the shebang kept) —
+// they document the repo, and EC2 caps the user data at 16 KB.
+const script = (name: string): string =>
+  readFileSync(join(bootDir, name), "utf8")
+    .split("\n")
+    .filter((l, i) => i === 0 || !/^\s*#/.test(l))
+    .join("\n");
 
 export interface UserDataRefs {
   region: string;
@@ -68,6 +74,7 @@ export function envFile(cfg: ForgejoConfig, refs: UserDataRefs): string {
     `FG_BUCKET=${refs.bucketName}`,
     `FG_TOKEN_PARAM=${cfg.adminTokenParamName}`,
     `FG_ADMIN_USER=${cfg.adminUsername}`,
+    `FG_TOKEN_SCOPES=${ADMIN_TOKEN_SCOPES}`,
     `FG_WORK=${FORGEJO_WORK}`,
     `FG_PORT=${FORGEJO_PORT}`,
     `FG_FORGEJO_URL=${FORGEJO.url}`,
