@@ -8,9 +8,21 @@ export const FORGEJO_WORK = "/data/forgejo";
 export const FORGEJO_PORT = 3000;
 
 /**
+ * Scopes of the connector's admin token — the least that covers every call the
+ * connector's Forgejo forge makes (README "Admin token scopes" maps each one):
+ * repo accounts and their tokens (admin), the org and its repos (organization),
+ * repo reads, renames/archives, collaborators, template generation (repository).
+ * Never `all`: that adds user, issue, notification, package, activitypub and misc.
+ */
+export const ADMIN_TOKEN_SCOPES = "write:admin,write:organization,write:repository";
+
+/**
  * Forgejo app.ini. No secret is inline: SECRET_KEY, INTERNAL_TOKEN and the JWT
  * secrets are read from files generated ONCE on the data volume (custom/secrets),
  * so the file can be rewritten at every instance launch and still match the DB.
+ * Hardening (0.1.3): no forks (a repo account could otherwise copy its repo out
+ * of its fence), no migrations and no webhooks (both make the server fetch a
+ * URL a user chose), no users page, no org created by a non-admin.
  */
 export function renderAppIni(cfg: ForgejoConfig): string {
   const s = `${FORGEJO_WORK}/custom/secrets`;
@@ -42,12 +54,15 @@ DEFAULT_PRIVATE = private
 FORCE_PRIVATE = true
 DEFAULT_BRANCH = main
 DISABLE_DOWNLOAD_SOURCE_ARCHIVES = true
+DISABLE_FORKS = true
+DISABLE_MIGRATIONS = true
 
 [security]
 INSTALL_LOCK = true
 SECRET_KEY_URI = file:${s}/secret_key
 INTERNAL_TOKEN_URI = file:${s}/internal_token
 MIN_PASSWORD_LENGTH = 16
+DISABLE_WEBHOOKS = true
 
 [oauth2]
 ENABLED = false
@@ -59,6 +74,13 @@ REQUIRE_SIGNIN_VIEW = true
 DEFAULT_KEEP_EMAIL_PRIVATE = true
 DEFAULT_ALLOW_CREATE_ORGANIZATION = false
 ENABLE_NOTIFY_MAIL = false
+
+[service.explore]
+REQUIRE_SIGNIN_VIEW = true
+DISABLE_USERS_PAGE = true
+
+[admin]
+DISABLE_REGULAR_ORG_CREATION = true
 
 [openid]
 ENABLE_OPENID_SIGNIN = false

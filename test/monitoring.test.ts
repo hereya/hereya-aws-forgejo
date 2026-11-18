@@ -51,3 +51,24 @@ test("outputs: URL, token PARAMETER NAME (never the token), read-only policy —
 test("the token parameter is deleted with the stack", () => {
   template.hasResourceProperties("Custom::AWS", { Delete: Match.stringLikeRegexp("deleteParameter") });
 });
+
+// « 1 action ≠ alarme livrée »: an alarm action on a topic nobody listens to
+// delivers nothing. With the relay inputs, the topic MUST have the relay as a
+// subscriber, invokable by SNS — and the two alarms that say "the server is
+// down" (EC2 status check, HTTPS probe) both reach that topic.
+test("with the Telegram inputs: the topic has the relay as a Lambda subscriber, SNS may invoke it", () => {
+  const t = synth({ telegramBotTokenParam: "/example/telegram-token", telegramChatId: "-100123" }).template;
+  const topicId = Object.keys(t.findResources("AWS::SNS::Topic"))[0];
+  const relayId = Object.keys(t.findResources("AWS::Lambda::Function", { Properties: { Environment: { Variables: { TELEGRAM_CHAT_ID: "-100123" } } } }))[0];
+  assert.ok(topicId && relayId);
+  t.hasResourceProperties("AWS::SNS::Subscription", { Protocol: "lambda", TopicArn: { Ref: topicId }, Endpoint: { "Fn::GetAtt": [relayId, "Arn"] } });
+  t.hasResourceProperties("AWS::Lambda::Permission", { Action: "lambda:InvokeFunction", Principal: "sns.amazonaws.com", SourceArn: { Ref: topicId }, FunctionName: { "Fn::GetAtt": [relayId, "Arn"] } });
+  for (const name of ["TestStack-status-check", "TestStack-https"]) {
+    t.hasResourceProperties("AWS::CloudWatch::Alarm", { AlarmName: name, AlarmActions: [{ Ref: topicId }], OKActions: [{ Ref: topicId }] });
+  }
+});
+
+test("without the Telegram inputs: no subscriber (the alarms still exist)", () => {
+  template.resourceCountIs("AWS::SNS::Subscription", 0);
+  template.resourceCountIs("AWS::CloudWatch::Alarm", 4);
+});
