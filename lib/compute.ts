@@ -4,6 +4,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as cr from "aws-cdk-lib/custom-resources";
 import type { ForgejoConfig } from "./config.ts";
+import { MIRROR_PREFIX, mirrorReadStatement, type Mirror } from "./mirror.ts";
 import { PINNED_AMI_IDS } from "./pins.ts";
 import { STACK_TAG, type Network, type Storage } from "./storage.ts";
 import { buildUserData } from "./user-data.ts";
@@ -22,7 +23,7 @@ function machineImage(stack: cdk.Stack, cfg: ForgejoConfig): ec2.IMachineImage {
   return ec2.MachineImage.genericLinux({ [region]: id });
 }
 
-export function createCompute(stack: cdk.Stack, cfg: ForgejoConfig, net: Network, store: Storage): Compute {
+export function createCompute(stack: cdk.Stack, cfg: ForgejoConfig, net: Network, store: Storage, mirror: Mirror): Compute {
   const tokenParamArn = cdk.Arn.format(
     { service: "ssm", resource: "parameter", resourceName: cfg.adminTokenParamName.replace(/^\//, "") },
     stack,
@@ -53,6 +54,8 @@ export function createCompute(stack: cdk.Stack, cfg: ForgejoConfig, net: Network
       resources: [store.bucket.bucketArn, store.bucket.arnForObjects("*")],
     }),
   );
+  // The binary mirror: read-only, its prefix only.
+  role.addToPolicy(mirrorReadStatement(mirror));
   role.addToPolicy(
     new iam.PolicyStatement({
       actions: ["cloudwatch:PutMetricData"],
@@ -77,6 +80,7 @@ export function createCompute(stack: cdk.Stack, cfg: ForgejoConfig, net: Network
       stackName: stack.stackName,
       volumeId: store.volume.ref,
       bucketName: store.bucket.bucketName,
+      mirrorUri: `s3://${mirror.bucket.bucketName}/${MIRROR_PREFIX}`,
     }),
     blockDevices: [
       {
@@ -89,6 +93,9 @@ export function createCompute(stack: cdk.Stack, cfg: ForgejoConfig, net: Network
       },
     ],
   });
+  // The mirror is filled (and the pinned checksums checked) BEFORE a replacement instance is created:
+  // an official URL that is down fails the deploy while the old instance still serves.
+  instance.node.addDependency(mirror.resource);
   cdk.Tags.of(instance).add(STACK_TAG, stack.stackName);
   cdk.Tags.of(instance).add("Name", `${stack.stackName}-forgejo`);
 

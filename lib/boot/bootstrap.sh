@@ -21,12 +21,20 @@ fi
 swapon -a || true
 
 log "binaries (pinned + checksummed)"
+# fetch <official url> <file>: the stack's S3 mirror first (filled by the deploy, same
+# bytes), the official URL only if the mirror has no copy. Either way the checksum
+# below decides.
+fetch() {
+  aws s3 cp --only-show-errors "$FG_MIRROR/${1##*/}" "$2" && return
+  log "mirror miss for ${1##*/}: official URL"
+  curl -fsSL --retry 5 -o "$2" "$1"
+}
 work=$(mktemp -d)
-curl -fsSL --retry 5 -o "$work/forgejo.xz" "$FG_FORGEJO_URL"
+fetch "$FG_FORGEJO_URL" "$work/forgejo.xz"
 xz -d "$work/forgejo.xz"
 echo "$FG_FORGEJO_SHA256  $work/forgejo" | sha256sum -c --quiet
 install -m 0755 "$work/forgejo" /usr/local/bin/forgejo
-curl -fsSL --retry 5 -o "$work/caddy.tgz" "$FG_CADDY_URL"
+fetch "$FG_CADDY_URL" "$work/caddy.tgz"
 echo "$FG_CADDY_SHA512  $work/caddy.tgz" | sha512sum -c --quiet
 tar -xzf "$work/caddy.tgz" -C "$work" caddy
 install -m 0755 "$work/caddy" /usr/local/bin/caddy

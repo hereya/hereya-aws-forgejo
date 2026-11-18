@@ -1,5 +1,5 @@
 name: dilaya/aws-forgejo
-version: 0.1.4
+version: 0.1.5
 description: "Dilaya's git server: one Forgejo VM (ARM, AL2023) behind Caddy (automatic TLS, request body cap), state on a separate encrypted EBS volume, daily forgejo dump to a versioned S3 bucket + daily EBS snapshots, four alarms, and an admin token for the connector in SSM Parameter Store."
 visibility: private
 iac: cdk

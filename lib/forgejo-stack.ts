@@ -3,6 +3,7 @@ import type { Construct } from "constructs";
 import { input, readConfig } from "./config.ts";
 import { createNetwork, createStorage } from "./storage.ts";
 import { createCompute } from "./compute.ts";
+import { createMirror } from "./mirror.ts";
 import { createMonitoring } from "./monitoring.ts";
 
 /**
@@ -24,7 +25,8 @@ export class ForgejoStack extends cdk.Stack {
     const cfg = readConfig(this.stackName);
     const net = createNetwork(this);
     const store = createStorage(this, cfg, net);
-    const compute = createCompute(this, cfg, net, store);
+    const mirror = createMirror(this, cfg);
+    const compute = createCompute(this, cfg, net, store, mirror);
     createMonitoring(this, cfg, compute);
 
     // --- Package outputs (consumer env contract) -----------------------------
