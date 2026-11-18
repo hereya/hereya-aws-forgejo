@@ -16,10 +16,12 @@ test("data volume: encrypted gp3, separate from root, RETAINED by default", () =
   assert.equal(Object.keys(retained.findResources("Custom::S3AutoDeleteObjects")).length, 0);
 });
 
-test("autoDelete=true deletes the volume and empties + deletes the bucket", () => {
+test("autoDelete=true deletes the volume and empties + deletes both buckets (backups, binary mirror)", () => {
   throwaway.hasResource("AWS::EC2::Volume", { DeletionPolicy: "Delete" });
-  throwaway.hasResource("AWS::S3::Bucket", { DeletionPolicy: "Delete" });
-  assert.equal(Object.keys(throwaway.findResources("Custom::S3AutoDeleteObjects")).length, 1);
+  const buckets = Object.values(throwaway.findResources("AWS::S3::Bucket")) as any[];
+  assert.equal(buckets.length, 2);
+  for (const b of buckets) assert.equal(b.DeletionPolicy, "Delete");
+  assert.equal(Object.keys(throwaway.findResources("Custom::S3AutoDeleteObjects")).length, 2);
 });
 
 test("backup bucket: versioned, encrypted, private, TLS-only, 30-day lifecycle", () => {

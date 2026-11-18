@@ -2,9 +2,12 @@
 // checksum. The box downloads them at first boot and refuses to continue on a
 // mismatch: a moved tag or a tampered mirror stops the boot, it never runs.
 //
-// To move a pin: read the new release's published checksum, bump the pair
-// here, run `npm test`, then deploy (a pin change rewrites the user data, which
-// REPLACES the instance — see README "Upgrades").
+// To move a pin: read the new release's published checksum(s), bump them here,
+// run `npm test`, then deploy (a pin change rewrites the user data, which
+// REPLACES the instance — see README "Upgrades"). The deploy first copies each
+// artefact into the stack's own S3 mirror (lib/mirror.ts, README "Binary
+// mirror") after checking the same checksum, so the new box never depends on a
+// third-party site being up.
 
 /** Forgejo 17.0.1 (2026-10-26): latest stable on 2026-11-17, carries the 26/10 security fixes. */
 export const FORGEJO = {
@@ -14,6 +17,9 @@ export const FORGEJO = {
   url: "https://code.forgejo.org/forgejo/forgejo/releases/download/v17.0.1/forgejo-17.0.1-linux-arm64.xz",
   // sha256 of the DECOMPRESSED binary (forgejo-17.0.1-linux-arm64.sha256).
   sha256: "1e99403746406e8199efc903ddd1940d5728a60e50241f7aa6c9f2b907bd8ec9",
+  // sha256 of the .xz itself (forgejo-17.0.1-linux-arm64.xz.sha256): what the deploy-time mirror checks
+  // before writing to S3 (it does not decompress). The box still checks `sha256` above.
+  xzSha256: "f615b9d8d24e685f30d96a21c1c34900a2016961bbf37b5e883e0354a3d535d6",
 } as const;
 
 /** Caddy 2.11.9 (2026-11-05): TLS + the request body cap in front of Forgejo. */

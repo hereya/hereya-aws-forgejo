@@ -23,6 +23,8 @@ export interface UserDataRefs {
   stackName: string;
   volumeId: string;
   bucketName: string;
+  /** s3://<mirror bucket>/<prefix>: where the box looks for the pinned binaries first. */
+  mirrorUri: string;
 }
 
 /** A file written verbatim: the quoted heredoc delimiter disables all expansion. */
@@ -72,6 +74,7 @@ export function envFile(cfg: ForgejoConfig, refs: UserDataRefs): string {
     `FG_STACK=${refs.stackName}`,
     `FG_VOLUME_ID=${refs.volumeId}`,
     `FG_BUCKET=${refs.bucketName}`,
+    `FG_MIRROR=${refs.mirrorUri}`,
     `FG_TOKEN_PARAM=${cfg.adminTokenParamName}`,
     `FG_ADMIN_USER=${cfg.adminUsername}`,
     `FG_TOKEN_SCOPES=${ADMIN_TOKEN_SCOPES}`,
